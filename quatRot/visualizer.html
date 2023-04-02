@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.121.1/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.121.1/examples/js/controls/TrackballControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/17.2.0/Tween.min.js"></script>
+    <script src=https://cdn.rawgit.com/mrdoob/three.js/r89/examples/js/renderers/CSS3DRenderer.js></script>
+    <style>
+    #button-container {
+        display:flex;
+        margin-right: 5px;
+        position: absolute;
+        left: 1;
+        top: 1;
+        width: 70px;
+        height: 50px;
+      }
+
+    #threejs-container {
+        position: absolute;
+      }
+
+    #update-button {
+        font-size: 25px;
+        margin-left: 120px;
+      }
+
+    label{
+        color: white;
+        margin-right: 10px;
+        font-size: 20px;
+        }
+
+    input[type="text"]{
+        margin-right: 10px;
+        width: 40px;
+        height: 20px;
+        font-size: 20px;
+        }
+
+    #color-picker {
+        width: 75px;
+        height: 75px;
+        position: absolute;
+        /* top: 50%;
+        left: 50%; */
+        transform: translateX(700px);
+        }
+      </style>
+
+</head>
+<body>
+    <div id="button-container">
+        <label for="a">A:</label>
+        <input type="text" id="a" name="a">
+        <label for="b">B:</label>
+        <input type="text" id="b" name="b">
+        <label for="c">C:</label>
+        <input type="text" id="c" name="c">
+        <label for="x">X:</label>
+        <input type="text" id="x" name="x">
+        <label for="y">Y:</label>
+        <input type="text" id="y" name="y">
+        <label for="z">Z:</label>
+        <input type="text" id="z" name="z">
+        <label for="size">Size:</label>
+        <input type="text" id="size" name="size">
+        <input type="color" id="color-picker">
+        <label for="color">Color:</label>
+        <button id="update-button">Add</button>
+
+      </div>
+      <div id="threejs-container"></div>
+
+    <script>
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+        camera.position.set(0, 0, 100);
+        camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+        // Create the axes helper
+        var axesHelper = new THREE.AxesHelper(15);
+        axesHelper.material.linewidth = 200;
+        // Add the axes helper to the scene
+        scene.add( axesHelper );
+        var renderer = new THREE.WebGLRenderer();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        // renderer.setClearColor( 0xffffff );
+
+        document.body.appendChild( renderer.domElement );
+        var controls = new THREE.TrackballControls( camera, renderer.domElement );
+
+        // Add the animation to the render loop
+        function animate(time) {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+            controls.update();
+        }
+
+        document.getElementById("update-button").addEventListener("click", function() {
+        var a = document.getElementById("a").value;
+        var b = document.getElementById("b").value;
+        var c = document.getElementById("c").value;
+        var x = document.getElementById("x").value;
+        var y = document.getElementById("y").value;
+        var z = document.getElementById("z").value;
+        var size = document.getElementById("size").value;
+
+        var color_pick = document.getElementById("color-picker").value;
+
+        a = parseFloat(a);
+        b = parseFloat(b);
+        c = parseFloat(c);
+        x = parseFloat(x);
+        y = parseFloat(y);
+        z = parseFloat(z);
+        size = parseFloat(size);
+
+
+        // Define the plane's equation
+        var planeEquation1 = new THREE.Plane(new THREE.Vector3(a, b, c), 0);
+        // Create the plane's geometry
+        var planeGeometry1 = new THREE.PlaneGeometry(size+20, size+20);
+        // Create the plane's mesh
+        var planeMaterial1 = new THREE.MeshBasicMaterial({ color: color_pick, side: THREE.DoubleSide });
+        var planeMesh1 = new THREE.Mesh(planeGeometry1, planeMaterial1);
+        planeMesh1.position.set(0,0,0);
+        planeMesh1.lookAt(planeEquation1.normal);
+
+        // Set the position of the plane to the origin
+        planeMesh1.translateX(x);
+        planeMesh1.translateY(y);
+        planeMesh1.translateZ(z);
+
+
+        var label = a.toString() + 'x + ' + b.toString() + 'y + ' + c.toString() + 'z'
+        var loader = new THREE.FontLoader();
+        loader.load( 'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function ( font ) {
+
+          var geometry = new THREE.TextGeometry( label, {
+            font: font,
+            size: .8,
+            height: .3,
+   
+          } );
+
+          var material = new THREE.MeshBasicMaterial( { color: 'black' } );
+          var textMesh = new THREE.Mesh( geometry, material );
+          textMesh.position.y = planeMesh1.position.y;
+          textMesh.position.x = planeMesh1.position.x;
+          textMesh.position.z = planeMesh1.position.z;
+          textMesh.lookAt(planeEquation1.normal);
+
+
+          scene.add( textMesh );
+
+        } );
+
+
+
+
+
+
+        // Add the plane to the scene
+        scene.add(planeMesh1);
+        
+        requestAnimationFrame(animate);
+
+        }); 
+
+        animate();
+    </script>
+
+
+</body>
+</html>

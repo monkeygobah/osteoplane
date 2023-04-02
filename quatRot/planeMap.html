@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.121.1/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.121.1/examples/js/controls/TrackballControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/17.2.0/Tween.min.js"></script>
+    <script src=https://cdn.rawgit.com/mrdoob/three.js/r89/examples/js/renderers/CSS3DRenderer.js></script>
+
+</head>
+<body>
+    <script>
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+        camera.position.set(0, 0, 100);
+        camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+        // Create the axes helper
+        var axesHelper = new THREE.AxesHelper(15);
+        axesHelper.material.linewidth = 200;
+        // Add the axes helper to the scene
+        scene.add( axesHelper );
+        var renderer = new THREE.WebGLRenderer();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        // renderer.setClearColor( 0xffffff );
+
+        document.body.appendChild( renderer.domElement );
+        var controls = new THREE.TrackballControls( camera, renderer.domElement );
+
+        // Add the animation to the render loop
+        function animate(time) {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+            controls.update();
+        }
+
+        a = -6.99;
+        b =  2.6;
+        c = -.57;
+        size = 10;
+
+        // Define the plane's equation
+        var planeEquation1 = new THREE.Plane(new THREE.Vector3(a, b, c), 0);
+        // Create the plane's geometry
+        var planeGeometry1 = new THREE.PlaneGeometry(size+20, size+20);
+        // Create the plane's mesh
+        var planeMaterial1 = new THREE.MeshBasicMaterial({ color: 'green', side: THREE.DoubleSide });
+        var planeMesh1 = new THREE.Mesh(planeGeometry1, planeMaterial1);
+        planeMesh1.position.set(0,0,0);
+        planeMesh1.lookAt(planeEquation1.normal);
+        scene.add(planeMesh1);
+
+
+        a2 = -4.59;
+        b2 =  .61;
+        c2 = -.81;
+
+        // Define the plane's equation
+        var planeEquation2 = new THREE.Plane(new THREE.Vector3(a2, b2, c2), 0);
+        // Create the plane's geometry
+        var planeGeometry2 = new THREE.PlaneGeometry(size+20, size+20);
+        // Create the plane's mesh
+        var planeMaterial2 = new THREE.MeshBasicMaterial({ color: 'red', side: THREE.DoubleSide });
+        var planeMesh2 = new THREE.Mesh(planeGeometry2, planeMaterial2);
+        planeMesh2.position.set(0,0,0);
+        planeMesh2.lookAt(planeEquation2.normal);
+        scene.add(planeMesh2);
+
+        var roll = -3.4;
+        var pitch = -4.58;
+        var yaw = 12.77;
+        console.log(roll);
+        console.log(pitch);
+        console.log(yaw);
+        // Define the angles for the yaw, pitch, and roll rotations in radians
+        const x_rot = THREE.MathUtils.degToRad(roll);
+        const  y_rot = THREE.MathUtils.degToRad(pitch);
+        const z_rot = THREE.MathUtils.degToRad(yaw);
+        console.log(x_rot);
+        console.log(y_rot);
+        console.log(z_rot);
+
+
+        // create a vector to rotate
+        var myVector539 = new THREE.Vector3(-4.59, .61, -.81);
+        console.log("Before rotation:", myVector539);
+
+        // create a new Euler object with the three angles
+        var euler = new THREE.Euler(x_rot, y_rot, z_rot, 'XYZ');
+
+        // apply the rotation to the vector
+        myVector539.applyEuler(euler);
+        console.log(myVector539);
+
+        var planeGeometry3 = new THREE.PlaneGeometry(size+60, size+60);
+        var planeMaterial3 = new THREE.MeshBasicMaterial({ color: 'blue', side: THREE.DoubleSide });
+        var planeMesh3 = new THREE.Mesh(planeGeometry3, planeMaterial3);
+
+        planeMesh3.lookAt(myVector539);
+
+        // const normal = plane.normal.clone().applyQuaternion(parent.quaternion);
+        scene.add(planeMesh3);
+
+        // Create a new Euler object with the specified angles
+        // const euler = new THREE.Euler(x_rot, y_rot, z_rot, 'XYZ');
+
+        // // Create a new rotation matrix from the Euler angles
+        // const matrix = new THREE.Matrix4().makeRotationFromEuler(euler);
+
+        // Apply the rotation matrix to the plane object's rotation property
+        // planeMesh3.rotation.x = x_rot;   
+        // planeMesh3.rotation.y = y_rot;
+        // planeMesh3.rotation.z = z_rot;
+
+        // planeMesh3.rotation.set(yawRadians, rollRadians,pitchRadians );
+
+
+        // var normal = new THREE.Vector3(a2, b2, c2);
+        // console.log(normal)
+
+        // normal.applyAxisAngle(new THREE.Vector3(1, 0, 0), rollRadians);
+        // normal.applyAxisAngle(new THREE.Vector3(0, 1, 0), pitchRadians);
+        // normal.applyAxisAngle(new THREE.Vector3(0, 0, 1), yawRadians);
+
+
+   
+        // // normal.normalize();// Create a rotation matrix based on the three angles
+        // // var rotationMatrix = new THREE.Matrix4();
+
+
+
+        // // const euler_var = new THREE.Euler(THREE.MathUtils.degToRad(yaw), THREE.MathUtils.degToRad(pitch) , THREE.MathUtils.degToRad(roll));
+        // // Apply the rotation matrix to the normal vector
+        // // normal.applyEuler(euler_var);
+        // console.log(normal)
+
+        // var planeEquation3 = new THREE.Plane(normal, 0);
+        // var planeGeometry3 = new THREE.PlaneGeometry(size+60, size+60);
+
+        // var planeMaterial3 = new THREE.MeshBasicMaterial({ color: 'blue', side: THREE.DoubleSide });
+        // var planeMesh3 = new THREE.Mesh(planeGeometry3, planeMaterial3);
+        // planeMesh3.lookAt(planeEquation3.normal);
+
+        // scene.add(planeMesh3);
+
+
+
+        a3 = -4.69;
+        b3 =  1.64;
+        c3 = -.36;
+
+        // Define the plane's equation
+        var planeEquation4 = new THREE.Plane(new THREE.Vector3(a3, b3, c3), 0);
+        // Create the plane's geometry
+        var planeGeometry4 = new THREE.PlaneGeometry(size+40, size+40);
+        // Create the plane's mesh
+        var planeMaterial4 = new THREE.MeshBasicMaterial({ color: 'purple', side: THREE.DoubleSide });
+        var planeMesh4 = new THREE.Mesh(planeGeometry4, planeMaterial4);
+        planeMesh4.position.set(0,0,0);
+        planeMesh4.lookAt(planeEquation4.normal);
+        scene.add(planeMesh4);
+
+
+        // // Update the equation of the plane with the transformed normal
+        // plane.setFromNormalAndCoplanarPoint(normal, new THREE.Vector3());
+
+        // // Create a mesh for the plane
+        // var planeGeometry = new THREE.PlaneGeometry(80 , 80);
+        // var planeMaterial = new THREE.MeshBasicMaterial({ color: 'blue', side: THREE.DoubleSide });
+        // var planeMesh = new THREE.Mesh(planeGeometry, planeMaterial);
+
+        // Position the mesh so that it coincides with the plane
+        // planeMesh.lookAt(normal);
+        // planeMesh.position.copy(normal.multiplyScalar(-d));
+
+        // Add the mesh to the scene
+
+
+            
+        // // Create a plane geometry
+        // var planeGeometry = new THREE.PlaneGeometry(size+60, size+60);
+
+        // // Create a material
+        // var planeMaterial = new THREE.MeshBasicMaterial({ color: 'blue',side: THREE.DoubleSide });
+
+        // // Create a mesh by combining the geometry and material
+        // var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+
+
+        // let phi = -.03;
+        // let theta = .19;
+        // let psi = -.15;
+
+        // // Rotate the mesh
+        // plane.rotation.x = phi;
+        // plane.rotation.y = theta;
+        // plane.rotation.z = psi;
+
+        // // Add the mesh to the scene
+        // scene.add(plane);
+
+
+
+        requestAnimationFrame(animate);
+
+        animate();
+    </script>
+
+
+</body>
+</html>

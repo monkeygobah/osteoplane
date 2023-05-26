@@ -164,6 +164,7 @@ for i in range(segments):
     preOpProxA = preop_arr[preop_prox_seg_index[0]]
     preOpProxB = preop_arr[preop_prox_seg_index[1]]
     preOpProxC = preop_arr[preop_prox_seg_index[2]]
+    
     preOpDistA = preop_arr[preop_prox_seg_index[3]]
     preOpDistB = preop_arr[preop_prox_seg_index[4]]
     preOpDistC = preop_arr[preop_prox_seg_index[5]]
@@ -177,6 +178,7 @@ for i in range(segments):
     postOpProxA = postop_arr[postop_prox_seg_index[0]]
     postOpProxB = postop_arr[postop_prox_seg_index[1]]
     postOpProxC = postop_arr[postop_prox_seg_index[2]]
+    
     postOpDistA = postop_arr[postop_prox_seg_index[3]] 
     postOpDistB = postop_arr[postop_prox_seg_index[4]]   
     postOpDistC = postop_arr[postop_prox_seg_index[5]] 

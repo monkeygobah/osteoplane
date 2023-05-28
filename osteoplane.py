@@ -8,7 +8,10 @@ from scipy.spatial.transform import Rotation as R
 # from plyfile import PlyData, PlyElement
 import tkinter as tk     # from tkinter import Tk for Python 3.x
 import tkinter.filedialog as fd # askopenfilename
-
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.patches
+import os
+import plotly.graph_objects as go
 
 "visualize np array of points as point cloud"
 def open3DPick(file, density):
@@ -40,27 +43,30 @@ def open3DNoPick(file, density):
     return pcd
 
 "Move whole structure to origin. if else statements allow us to decide which segment we are placing"
-def moveToOrigin(points, label):
+def moveToOrigin(data, label):
     x = label[0]
     y = label[1]
     z = label[2]
     out = []
-    for plane in points:
-        temp = []
-        # for point in plane:
-        new_x = plane[0] -x
-        new_y = plane[1] -y
-        new_z = plane[2] -z
-        temp.append(new_x)
-        temp.append(new_y)
-        temp.append(new_z)
-        out.append(temp)
+
+    for planes in data:
+        mid_temp = []
+        for plane in planes:
+            temp = []
+            # for point in plane:
+            new_x = plane[0] -x
+            new_y = plane[1] -y
+            new_z = plane[2] -z
+            temp.append(new_x)
+            temp.append(new_y)
+            temp.append(new_z)
+            mid_temp.append(temp)
+        out.append(mid_temp)
     return out
 
 "calculate angle to move points to z axis. Could probably combine with rotate_struct_1"
-def getAngle_X(centroid2):
-    # get angle to rotate whole skull from the naseon now
-    angle = math.atan(centroid2[2]/centroid2[1]) #is in radians
+def getAngle_X(point):
+    angle = math.atan(point[2]/point[1]) #is in radians
     angle = (-1*angle)
     return angle
 
@@ -76,9 +82,8 @@ def rotate_struct_1(points, angle):
     return points
 
 "calculate angle to move points to z axis. Could probably combine with rotate_struct_2"
-def getAngle_Z(centroid2):
-    # get angle to rotate whole skull from the naseon now
-    angle = math.atan(centroid2[0]/centroid2[1]) #is in radians
+def getAngle_Z(point):
+    angle = math.atan(point[0]/point[1]) #is in radians
     # angle = (-*angle)
     return angle
 
@@ -102,6 +107,92 @@ def calcPlaneAngle(a1, b1, c1, a2, b2, c2):
     angle = math.degrees(math.acos(d))
     print("Angle is " + str(angle) + " degree")
     return angle
+
+
+def visualize_data(plan, postop, segment_num):
+    plane1, plane2 = plan
+    plane3, plane4 = postop
+
+    title = f'Segment {segment_num} Registered'
+
+    fig = go.Figure()
+
+    for i, planes in enumerate([[plane1, plane2], [plane3, plane4]]):
+        if i == 0:
+            color = 'red'
+            name = 'Plan'
+        else:
+            color = 'blue'
+            name = 'Post-op'
+
+        for j, plane in enumerate(planes):
+            x = [point[0] for point in plane]
+            y = [point[1] for point in plane]
+            z = [point[2] for point in plane]
+
+            # Add point at the end to close the triangle
+            x.append(plane[0][0])
+            y.append(plane[0][1])
+            z.append(plane[0][2])
+
+            # Connect the corresponding points with lines
+            if j == 0:
+                x_next = [point[0] for point in planes[j+1]]
+                y_next = [point[1] for point in planes[j+1]]
+                z_next = [point[2] for point in planes[j+1]]
+
+                for k in range(len(x)-1):  # Adjust to exclude last point (repeated for closing the triangle)
+                    fig.add_trace(go.Scatter3d(
+                        x=[x[k], x_next[k]], 
+                        y=[y[k], y_next[k]], 
+                        z=[z[k], z_next[k]], 
+                        mode='lines',
+                        line=dict(color=color),
+                        name=name,
+                        showlegend=(k == 0)  # Show legend only for the first line
+                    ))
+
+            # Add the plane as a scatter plot
+            fig.add_trace(go.Scatter3d(
+                x=x, 
+                y=y, 
+                z=z, 
+                mode='lines+markers',
+                line=dict(color=color),
+                marker=dict(size=10, color=color),
+                name=name,
+                showlegend=False
+            ))
+
+    # Add the origin point
+    fig.add_trace(go.Scatter3d(
+        x=[0], 
+        y=[0], 
+        z=[0], 
+        mode='markers',
+        marker=dict(size=6, color='black'),
+        name='Origin (Proximal End of Model)'
+    ))
+
+    fig.update_layout(
+        title=title,
+        scene=dict(
+            xaxis=dict(title='X'),
+            yaxis=dict(title='Y'),
+            zaxis=dict(title='Z'),
+        ),
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=0.01
+        )
+    )
+
+    if not os.path.exists('figures'):
+        os.makedirs('figures')
+
+    fig.write_html('figures/' + title + '.html')  # Save the figure as an interactive HTML file
 
 
 "function generates equation of plane based on 3 points. Plane is a list of lists of xyz points. \""
@@ -178,29 +269,55 @@ def get_euler_angles(planeA, planeB):
     # return the angles of interest and rotation matrix to later calculate the rotated plane
     return x, y, z, r_mat
 
-#function to plot the planes to visualize results
-def plot_planes(planeA, planeB, planeC):
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
 
+def plot_planes(planeA, planeB, planeC, segment_num, location):
     x = np.linspace(-1, 1, 10)
     y = np.linspace(-1, 1, 10)
     x, y = np.meshgrid(x, y)
+    title = f'Segment {segment_num} {location} Plane'
 
     zA = calculate_plane_from_normal(planeA, x, y)
     zB = calculate_plane_from_normal(planeB, x, y)
     zC = calculate_plane_from_normal(planeC, x, y, z_offset=1)
 
-    ax.plot_surface(x, y, zA, alpha=0.5, rstride=100, cstride=100, color='blue')
-    ax.plot_surface(x, y, zB, alpha=0.5, rstride=100, cstride=100, color='red')
-    ax.plot_surface(x, y, zC, alpha=0.5, facecolors='green', rstride=100, cstride=100, shade=False)
+    fig = go.Figure(data=[
+        go.Surface(x=x, y=y, z=zA, name='Pre-op', colorscale='Reds',  showscale=False),
+        go.Surface(x=x, y=y, z=zB, name='Post-op', colorscale='Blues', showscale=False),
+        go.Surface(x=x, y=y, z=zC, name='Rotated Post-op', colorscale='Greens', showscale=False),
 
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
 
-    plt.show()
-   
+    # Dummy scatter3d plots for legend
+        go.Scatter3d(x=[None], y=[None], z=[None], mode='markers',
+                        marker=dict(size=0, color='red'), name='Pre-op'),
+        go.Scatter3d(x=[None], y=[None], z=[None], mode='markers',
+                        marker=dict(size=0, color='blue'), name='Post-op'),
+        go.Scatter3d(x=[None], y=[None], z=[None], mode='markers',
+                        marker=dict(size=0, color='green'), name='Rotated Post-op'),
+        ])
+
+    fig.update_layout(
+        title=title,
+        autosize=False,
+        width=800,
+        height=600,
+        scene=dict(
+            xaxis=dict(title='X'),
+            yaxis=dict(title='Y'),
+            zaxis=dict(title='Z'),
+        ),
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=0.01
+        )
+    )
+
+    if not os.path.exists('figures'):
+        os.makedirs('figures')
+
+    fig.write_html('figures/' + title + '.html')  # Save the figure as an interactive HTML file
+
 def fileSelect():
     root = tk.Tk()
     files = fd.askopenfilenames(parent=root, title='Choose a file')
@@ -230,19 +347,19 @@ def main_loop(preop, postop, density):
     target_1_A = preop_arr[preop_prox_seg_index[0]]
     target_1_B = preop_arr[preop_prox_seg_index[1]]
     target_1_C = preop_arr[preop_prox_seg_index[2]] 
-    target_1_plane = [target_1_A,target_1_B,target_1_C] 
+    target_1_plane = [target_1_A.tolist(),target_1_B.tolist(),target_1_C.tolist()] 
     
     target_2_A = preop_arr[preop_prox_seg_index[3]]
     target_2_B = preop_arr[preop_prox_seg_index[4]]
     target_2_C = preop_arr[preop_prox_seg_index[5]]
-    target_2_plane = [target_2_A,target_2_B,target_2_C] 
+    target_2_plane = [target_2_A.tolist(),target_2_B.tolist(),target_2_C.tolist()] 
     
     plan_distance_seg_1 = np.linalg.norm(target_1_A - target_2_A)
     
     target_3_A = preop_arr[preop_prox_seg_index[6]]
     target_3_B = preop_arr[preop_prox_seg_index[7]]
     target_3_C = preop_arr[preop_prox_seg_index[8]] 
-    target_3_plane = [target_3_A,target_3_B,target_3_C] 
+    target_3_plane = [target_3_A.tolist(),target_3_B.tolist(),target_3_C.tolist()] 
     
     plan_distance_seg_2 = np.linalg.norm(target_2_A - target_3_A)
 
@@ -250,7 +367,7 @@ def main_loop(preop, postop, density):
         target_4_A = preop_arr[preop_prox_seg_index[9]]
         target_4_B = preop_arr[preop_prox_seg_index[10]]
         target_4_C = preop_arr[preop_prox_seg_index[11]]
-        target_4_plane = [target_4_A,target_4_B,target_4_C] 
+        target_4_plane = [target_4_A.tolist(),target_4_B.tolist(),target_4_C.tolist()] 
         plan_distance_seg_3 = np.linalg.norm(target_3_A - target_4_A)
 
 
@@ -258,24 +375,24 @@ def main_loop(preop, postop, density):
     postOpProxA_1 = postop_arr[postop_prox_seg_index[0]]
     postOpProxB_1 = postop_arr[postop_prox_seg_index[1]]
     postOpProxC_1 = postop_arr[postop_prox_seg_index[2]]
-    plane_post_prox_1 = [postOpProxA_1,postOpProxB_1,postOpProxC_1] 
+    plane_post_prox_1 = [postOpProxA_1.tolist(),postOpProxB_1.tolist(),postOpProxC_1.tolist()] 
     
     postOpDistA_1 = postop_arr[postop_prox_seg_index[3]] 
     postOpDistB_1 = postop_arr[postop_prox_seg_index[4]]   
     postOpDistC_1 = postop_arr[postop_prox_seg_index[5]] 
-    plane_post_dist_1 = [postOpDistA_1,postOpDistB_1,postOpDistC_1] 
+    plane_post_dist_1 = [postOpDistA_1.tolist(),postOpDistB_1.tolist(),postOpDistC_1.tolist()] 
 
     post_distance_seg_1 = np.linalg.norm(postOpProxA_1 - postOpDistA_1)
 
     postOpProxA_2 = postop_arr[postop_prox_seg_index[6]]
     postOpProxB_2 = postop_arr[postop_prox_seg_index[7]]
     postOpProxC_2 = postop_arr[postop_prox_seg_index[8]]
-    plane_post_prox_2 = [postOpProxA_2,postOpProxB_2,postOpProxC_2] 
+    plane_post_prox_2 = [postOpProxA_2.tolist(),postOpProxB_2.tolist(),postOpProxC_2.tolist()] 
     
     postOpDistA_2 = postop_arr[postop_prox_seg_index[9]] 
     postOpDistB_2 = postop_arr[postop_prox_seg_index[10]]   
     postOpDistC_2 = postop_arr[postop_prox_seg_index[11]] 
-    plane_post_dist_2 = [postOpDistA_2,postOpDistB_2,postOpDistC_2] 
+    plane_post_dist_2 = [postOpDistA_2.tolist(),postOpDistB_2.tolist(),postOpDistC_2.tolist()] 
     
     post_distance_seg_2 = np.linalg.norm(postOpProxA_2 - postOpDistA_2)
     
@@ -283,19 +400,19 @@ def main_loop(preop, postop, density):
         postOpProxA_3 = postop_arr[postop_prox_seg_index[12]]
         postOpProxB_3 = postop_arr[postop_prox_seg_index[13]]
         postOpProxC_3 = postop_arr[postop_prox_seg_index[14]]
-        plane_post_prox_3 = [postOpProxA_3,postOpProxB_3,postOpProxC_3] 
+        plane_post_prox_3 = [postOpProxA_3.tolist(),postOpProxB_3.tolist(),postOpProxC_3.tolist()] 
         
         postOpDistA_3 = postop_arr[postop_prox_seg_index[15]] 
         postOpDistB_3 = postop_arr[postop_prox_seg_index[16]]   
         postOpDistC_3 = postop_arr[postop_prox_seg_index[17]] 
-        plane_post_dist_3 = [postOpDistA_3,postOpDistB_3,postOpDistC_3] 
+        plane_post_dist_3 = [postOpDistA_3.tolist(),postOpDistB_3.tolist(),postOpDistC_3.tolist()] 
         post_distance_seg_3 = np.linalg.norm(postOpProxA_3 - postOpDistA_3)
 
     
-    segemnt_1_plan = [target_1_plane,target_2_plane]
+    segment_1_plan = [target_1_plane,target_2_plane]
     segment_1_post = [plane_post_prox_1,plane_post_dist_1]
     
-    segment_1 = [segemnt_1_plan, segment_1_post]
+    segment_1 = [segment_1_plan, segment_1_post]
     
     segment_2_plan = [target_2_plane,target_3_plane]
     segment_2_post = [plane_post_prox_2,plane_post_dist_2]
@@ -303,53 +420,73 @@ def main_loop(preop, postop, density):
     segment_2 = [segment_2_plan, segment_2_post]
 
     final_segments = [segment_1, segment_2 ]
-    
+    # final_segments = [[[xyz], [xyz]], [[xyz],[xyz]]   ,  [] []      ]
     if segments==3:
         segment_3_plan = [target_3_plane, target_4_plane]
         segment_3_post = [plane_post_prox_3,plane_post_dist_3]
         segment_3 = [segment_3_plan, segment_3_post]
         final_segments = [segment_1, segment_2, segment_3]
 
-        ###started editing here for registration stuff
 
-    for segment in final_segments:
+    distances.append(plan_distance_seg_1)
+    distances.append(plan_distance_seg_2)
+    if segments ==3:
+        distances.append(plan_distance_seg_2)
+    distances.append(post_distance_seg_1)
+    distances.append(post_distance_seg_2)
+    if segments ==3:
+        distances.append(post_distance_seg_3)
+    
+    
+    for idx, segment in enumerate(final_segments):
         ### PLOT HERE segment[0] and segment[1]
-        translated_segment_plan = moveToOrigin(segment[0], segment[0][0][0])
-        angle1_preop = getAngle_X(translated_segment_plan[1][1])
+        plan_model = segment[0]
+        postop_model = segment[1]
+         
+        plan_model_prox = plan_model[0]
+        postop_model_prox = postop_model[0]
 
-        translated_segment_postop = moveToOrigin(segment[1], segment[1][0][0])
-        angle1_postop = getAngle_X(translated_segment_postop[1][1])
-        ### PLOT HERE segment[0] and segment[1]
-
+        visualize_data(plan_model, postop_model, idx+1)
+        translated_segment_plan = moveToOrigin(plan_model, plan_model_prox[0])
+        angle1_preop = getAngle_X(translated_segment_plan[1][0])
+        
+        translated_segment_postop = moveToOrigin(postop_model, postop_model_prox[0])
+        angle1_postop = getAngle_X(translated_segment_postop[1][0])
+    
+        visualize_data(translated_segment_plan, translated_segment_postop, idx+2)
+        
         rotate_1_preop = rotate_struct_1(translated_segment_plan, angle1_preop)
         rotate_1_postop = rotate_struct_1(translated_segment_postop, angle1_postop)
-        ### PLOT HERE rotate_1_preop and rotate_1_postop
-        ### align on axis
-        angle2_preop = getAngle_Z(rotate_1_preop[0][1])
-        angle2_postop = getAngle_Z(rotate_1_postop[1][1])
+        
+        visualize_data(rotate_1_preop, rotate_1_postop,idx+3)
+        
 
-        print('Fixing on other axis ')
+        
+        angle2_preop = getAngle_Z(rotate_1_preop[1][0])
+        angle2_postop = getAngle_Z(rotate_1_postop[1][0])
+
         rotate_2_preop = rotate_struct_2(rotate_1_preop, angle2_preop)
         rotate_2_postop = rotate_struct_2(rotate_1_postop, angle2_postop)
-        ### PLOT HERE rotate_2_preop and rotate_2_postop
         
+        visualize_data(rotate_2_preop, rotate_2_postop, idx+4)
         
-        " put segment 1 (plane 1) on origin and rotate centroid so that all other points \
-        this is just doing the movement of the centroid line line up"
 
-        #equation of plane of points around 1st centroid with sengment 1 on origin 
+        #define plane equatinos for proximal and distal pre and post op planes
         preProxA1,preProxB1,preProxC1 = definePlaneEquation(rotate_2_preop[0],'one')
         preDistA1,preDistB1,preDistC1 = definePlaneEquation(rotate_2_preop[1],'one')
 
         postProxA1,postProxB1,postProxC1 = definePlaneEquation(rotate_2_postop[0],'one')
         postDistA1,postDistB1,postDistC1 = definePlaneEquation(rotate_2_postop[1],'one')
 
-    ######## normal plane should be xz plane- used three random points from xz plane. Need d value 
+        # normal plane should be xz plane- used three random points from xz plane. Need d value 
         # (distance from xz plane.) In this case, d = 1/2 the y component of the segment not on the origin
 
-        y_pre = rotate_2_preop[1][1][1] /2
-        y_post = rotate_2_postop[1][1][1] /2
-        ######## subtract normal plane - plane 1 and normal plane - plane 2 to get angles of interest
+
+        
+        y_pre = rotate_2_preop[1][0][1] /2
+        y_post = rotate_2_postop[1][0][1] /2
+        
+        # subtract normal plane - plane 1 and normal plane - plane 2 to get delta (second metric of reporting)
         normMinusPlaneProxPre = calcPlaneAngle(preProxA1,preProxB1,preProxC1,0,y_pre,0)
         normMinusPlaneDistPre = calcPlaneAngle(preDistA1,preDistB1,preDistC1,0,y_pre,0)
 
@@ -359,23 +496,23 @@ def main_loop(preop, postop, density):
         deltaProx = normMinusPlaneProxPost-normMinusPlaneProxPre
         deltaDist = normMinusPlaneDistPost-normMinusPlaneDistPre
 
-        print(deltaProx)
-        print(deltaDist)
-
+        deltas.append(abs(deltaProx))
+        deltas.append(abs(deltaDist))
+        
         v1 = np.array([preProxA1,preProxB1,preProxC1])
         v2 = np.array([postProxA1,postProxB1,postProxC1])
         
         phi1, theta1, psi1, r1 = get_euler_angles(v2, v1)
         v3 = np.dot(r1, v2)
         a_prox, b_prox, c_prox = v3
-        plot_planes(v1, v2, v3)
+        plot_planes(v1, v2, v3, idx+1, 'Proximal')
         
         v4 = np.array([preDistA1,preDistB1,preDistC1])
         v5 = np.array([postDistA1,postDistB1,postDistC1])
         phi2,theta2, psi2, r2 = get_euler_angles(v5, v4)
         v6 = np.dot(r2, v5)
         a_dist, b_dist, c_dist = v6
-        plot_planes(v4, v5, v6)
+        plot_planes(v4, v5, v6, idx+1, 'Distal')
 
         pre_prox_equation = roundPlanes(preProxA1, preProxB1, preProxC1)
         pre_dist_equation = roundPlanes(preDistA1, preDistB1, preDistC1)
@@ -386,11 +523,11 @@ def main_loop(preop, postop, density):
         proximal_new_equation = roundPlanes(a_prox, b_prox, c_prox)
         distal_new_equation = roundPlanes(a_dist, b_dist, c_dist)
         
-        pre_mesh_prox = create_triangle_mesh(segment[0][0], color = [1,0,0])
-        pre_mesh_dist = create_triangle_mesh(segment[0][1], color = [0,0,1])
+        pre_mesh_prox = create_triangle_mesh(segment[0][0], color = [1,0,1])
+        pre_mesh_dist = create_triangle_mesh(segment[0][1], color = [0,1,1])
 
-        post_mesh_prox = create_triangle_mesh(segment[1][0], color = [1,0,0])
-        post_mesh_dist = create_triangle_mesh(segment[1][1],color = [0,0,1])
+        post_mesh_prox = create_triangle_mesh(segment[1][0], color = [1,0,1])
+        post_mesh_dist = create_triangle_mesh(segment[1][1],color = [0,1,1])
 
         ply_Planes.append(pre_mesh_prox)
         ply_Planes.append(pre_mesh_dist)
@@ -411,8 +548,8 @@ def main_loop(preop, postop, density):
         original_planes.append(post_dist_equation)
         rotated_planes.append(proximal_new_equation)
         rotated_planes.append(distal_new_equation)
-        # distances.append(distance_1)
-        # distances.append(distance_2)
+        
+
         
     return preop_cloud, postop_cloud
    
@@ -424,17 +561,19 @@ preop = file_list[0]
 postop = file_list[1]
 
 # segments = input('select number of segments')
-segments = 2
+segments = 3
+initials = 'AA'
 print(f'Number of segments is  {segments}')
 
 out = '/Users/georgienahass/Desktop/'
-filename = 'osteoplane.csv'
+filename = initials+'osteoplane.csv'
 
 original_planes = []
 rotated_planes = []
 angles = []
 ply_Planes = []
 distances = []
+deltas = []
 if segments == 3:
     with open(out + filename,'w') as fout:
         line = ['segment 1 proximal preop plane','segment 1 distal preop plane','segment 1 proximal postop plane','segment 1 distal postop plane',
@@ -450,16 +589,25 @@ if segments == 3:
             'phi proximal segment 3','theta proximal segment 3','psi proximal segment 3',
             'phi distal segment 3','theta distal segment 3','psi distal segment 3',
             'distance segment 1 preop', 'distance segment 2 preop', 'distance segment 3 preop',
-            'distance segment 1 postop', 'distance segment 2 postop', 'distance segment 3 postop',            ] 
+            'distance segment 1 postop', 'distance segment 2 postop', 'distance segment 3 postop',  
+            'delta segment 1 proximal', 'delta segment 1 distal',
+            'delta segment 2 proximal', 'delta segment 2 distal',
+            'delta segment 3 proximal', 'delta segment 3 distal']
         fout.write("%s\n" % ",".join(line))
     
     preop_arr, postop_arr = main_loop(preop, postop, density)
     
     low_res_preop = open3DNoPick(preop, 100000)
     low_res_posteop = open3DNoPick(postop, 100000)
+    
+    preop_save = low_res_preop+ply_Planes[0]+ply_Planes[1]+ply_Planes[4]+ ply_Planes[5] + ply_Planes[8] + ply_Planes[9]
+    postop_save = low_res_posteop + ply_Planes[2] + ply_Planes[3] + ply_Planes[6] + ply_Planes[7] + ply_Planes[10] + ply_Planes[11]
+    
+    o3d.io.write_point_cloud('figures/result_plan.ply',preop_save)
+    o3d.io.write_point_cloud('figures/result_post-op.ply',postop_save)
 
-    o3d.visualization.draw_geometries([low_res_preop, ply_Planes[0], ply_Planes[1] ,ply_Planes[4] , ply_Planes[5] ,ply_Planes[8] , ply_Planes[9]])
-    o3d.visualization.draw_geometries([low_res_posteop, ply_Planes[2], ply_Planes[3] ,ply_Planes[6] , ply_Planes[7] ,ply_Planes[10] , ply_Planes[11]])
+    # o3d.visualization.draw_geometries([low_res_preop, ply_Planes[0], ply_Planes[1] ,ply_Planes[4] , ply_Planes[5] ,ply_Planes[8] , ply_Planes[9]])
+    # o3d.visualization.draw_geometries([low_res_posteop, ply_Planes[2], ply_Planes[3] ,ply_Planes[6] , ply_Planes[7] ,ply_Planes[10] , ply_Planes[11]])
 
     with open(out + filename,'a') as fout:
         line = [original_planes[0], original_planes[1], original_planes[2], original_planes[3],  
@@ -475,7 +623,10 @@ if segments == 3:
             angles[12], angles[13],  angles[14],
             angles[15], angles[16],  angles[17],
             distances[0], distances[2], distances[4],
-            distances[1], distances[3], distances[5]]
+            distances[1], distances[3], distances[5],
+            deltas[0], deltas[1],
+            deltas[2], deltas[3],
+            deltas[4], deltas[5]]
         line = [str(l) for l in line]
         fout.write("%s\n" % ",".join(line))
         
@@ -490,7 +641,9 @@ if segments == 2:
             'phi proximal segment 2','theta proximal segment 2','psi proximal segment 2',
             'phi distal segment 2','theta distal segment 2','psi distal segment 2',
             'distance segment 1 preop', 'distance segment 2 preop', 
-            'distance segment 1 postop', 'distance segment 2 postop' ]
+            'distance segment 1 postop', 'distance segment 2 postop',
+            'delta segment 1 proximal', 'delta segment 1 distal',
+            'delta segment 2 proximal', 'delta segment 2 distal']
         fout.write("%s\n" % ",".join(line))
         
     _, _ = main_loop(preop, postop, density)
@@ -498,7 +651,12 @@ if segments == 2:
     low_res_preop = open3DNoPick(preop, 100000)
     low_res_posteop = open3DNoPick(postop, 100000)
     
+    preop_save = low_res_preop+ply_Planes[0]+ply_Planes[1]+ply_Planes[4]+ ply_Planes[5]
+    postop_save = low_res_posteop + ply_Planes[2] + ply_Planes[3] + ply_Planes[6] + ply_Planes[7]
     
+    o3d.io.write_point_cloud('figures/result_plan.ply',preop_save)
+    o3d.io.write_point_cloud('figures/result_post-op.ply',postop_save)
+
     o3d.visualization.draw_geometries([low_res_preop, ply_Planes[0], ply_Planes[1], ply_Planes[4], ply_Planes[5]])
     o3d.visualization.draw_geometries([low_res_posteop, ply_Planes[2], ply_Planes[3], ply_Planes[6], ply_Planes[7]])
 
@@ -512,7 +670,9 @@ if segments == 2:
                 angles[6], angles[7],  angles[8],
                 angles[9], angles[10],  angles[11],
                 distances[0], distances[2],
-                distances[1], distances[3]]
+                distances[1], distances[3],
+                deltas[0], deltas[1],
+                deltas[2], deltas[3]]
             line = [str(l) for l in line]
             fout.write("%s\n" % ",".join(line))
 

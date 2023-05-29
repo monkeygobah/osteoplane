@@ -342,6 +342,46 @@ def create_triangle_mesh(points, color=[1, 0, 0]):
     
     return pcd
 
+def plot_radar_chart(proximal_angles, distal_angles, seg):
+    assert len(proximal_angles) == len(distal_angles)
+    
+    labels = np.array(['Phi', 'Theta', 'Psi'])
+    num_vars = len(labels)
+
+    # compute angle for each axis
+    angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
+
+    # the radar chart will be a circle, so we need to "close the loop"
+    # by appending the start value to the end.
+    angles += angles[:1]
+
+    # convert the angles from radians to degrees
+    proximal_angles = [np.degrees(angle) for angle in proximal_angles]
+    distal_angles = [np.degrees(angle) for angle in distal_angles]
+    
+    # append the start value to the end
+    proximal_angles += proximal_angles[:1]
+    distal_angles += distal_angles[:1]
+    
+    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+    
+    # plot the proximal angles
+    ax.fill(angles, proximal_angles, color='red', alpha=0.25, label='Proximal')
+    
+    # plot the distal angles
+    ax.fill(angles, distal_angles, color='blue', alpha=0.25, label='Distal')
+
+    ax.set_yticklabels([])
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(labels)
+    
+    ax.legend(loc='upper right', bbox_to_anchor=(1.1, 1.1))
+    plt.savefig(f'figures/segment_{seg}_.png')
+
+    plt.show()
+
+
+
 def main_loop(preop, postop, density):
     preop_prox_seg_index, preop_arr, preop_cloud = open3DPick(preop, density)
     target_1_A = preop_arr[preop_prox_seg_index[0]]
@@ -446,19 +486,19 @@ def main_loop(preop, postop, density):
         plan_model_prox = plan_model[0]
         postop_model_prox = postop_model[0]
 
-        visualize_data(plan_model, postop_model, idx+1)
+        # visualize_data(plan_model, postop_model, idx+1)
         translated_segment_plan = moveToOrigin(plan_model, plan_model_prox[0])
         angle1_preop = getAngle_X(translated_segment_plan[1][0])
         
         translated_segment_postop = moveToOrigin(postop_model, postop_model_prox[0])
         angle1_postop = getAngle_X(translated_segment_postop[1][0])
     
-        visualize_data(translated_segment_plan, translated_segment_postop, idx+2)
+        # visualize_data(translated_segment_plan, translated_segment_postop, idx+2)
         
         rotate_1_preop = rotate_struct_1(translated_segment_plan, angle1_preop)
         rotate_1_postop = rotate_struct_1(translated_segment_postop, angle1_postop)
         
-        visualize_data(rotate_1_preop, rotate_1_postop,idx+3)
+        # visualize_data(rotate_1_preop, rotate_1_postop,idx+3)
         
 
         
@@ -468,7 +508,7 @@ def main_loop(preop, postop, density):
         rotate_2_preop = rotate_struct_2(rotate_1_preop, angle2_preop)
         rotate_2_postop = rotate_struct_2(rotate_1_postop, angle2_postop)
         
-        visualize_data(rotate_2_preop, rotate_2_postop, idx+4)
+        visualize_data(rotate_2_preop, rotate_2_postop, idx+1)
         
 
         #define plane equatinos for proximal and distal pre and post op planes
@@ -514,6 +554,11 @@ def main_loop(preop, postop, density):
         a_dist, b_dist, c_dist = v6
         plot_planes(v4, v5, v6, idx+1, 'Distal')
 
+        proximal_angles = [phi1, theta1, psi1]  # replace these with your actual angles
+        distal_angles = [phi2, theta2, psi2]  # replace these with your actual angles
+
+        plot_radar_chart(proximal_angles, distal_angles, idx+1)
+        
         pre_prox_equation = roundPlanes(preProxA1, preProxB1, preProxC1)
         pre_dist_equation = roundPlanes(preDistA1, preDistB1, preDistC1)
         

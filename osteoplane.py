@@ -243,8 +243,8 @@ def main_loop(preop, postop, density, segments):
         a_dist, b_dist, c_dist = v6
         plot_utils.plot_planes(v4, v5, v6, idx+1, 'Distal')
 
-        proximal_angles = [phi1, theta1, psi1]  
-        distal_angles = [phi2, theta2, psi2]  
+        proximal_angles = [abs(phi1), abs(theta1), abs(psi1)]  
+        distal_angles = [abs(phi2), abs(theta2), abs(psi2)]  
 
         plot_utils.plot_radar_chart( [abs(phi1), abs(theta1), abs(psi1)] ,  [abs(phi2), abs(theta2), abs(psi2)]  , idx+1)
         plot_utils.euler_bar_chart(proximal_angles, distal_angles, idx+1)
@@ -270,13 +270,13 @@ def main_loop(preop, postop, density, segments):
         ply_Planes.append(post_mesh_prox)
         ply_Planes.append(post_mesh_dist)
         
-        angles.append(round(np.degrees(phi1), 2))
-        angles.append(round(np.degrees(theta1),2 ))
-        angles.append(round(np.degrees(psi1),2))
+        angles.append(abs(round(np.degrees(phi1), 2)))
+        angles.append(abs(round(np.degrees(theta1),2 )))
+        angles.append(abs(round(np.degrees(psi1),2)))
         
-        angles.append(round(np.degrees(phi2),2))
-        angles.append(round(np.degrees(theta2),2))
-        angles.append(round(np.degrees(psi2),2))
+        angles.append(abs(round(np.degrees(phi2),2)))
+        angles.append(abs(round(np.degrees(theta2),2)))
+        angles.append(abs(round(np.degrees(psi2),2)))
         
         original_planes.append(pre_prox_equation)
         original_planes.append(pre_dist_equation)

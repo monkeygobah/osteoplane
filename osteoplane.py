@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import math
 # from mpl_toolkits.mplot3d import Axes3D
 # from quaternion import as_euler_angles
-from scipy.spatial.transform import Rotation as R
+# from scipy.spatial.transform import Rotation as R
 # from plyfile import PlyData, PlyElement
 import tkinter as tk     # from tkinter import Tk for Python 3.x
 import tkinter.filedialog as fd # askopenfilename
